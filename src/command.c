@@ -4586,9 +4586,10 @@ rxvt_process_motionnotify (rxvt_t* r, XEvent* ev)
     }
 #endif
 
-    if (ISSET_PMODE(r, page, PrivMode_mouse_report) &&
-	!(r->h->bypass_keystate))
-	return;
+    if (ISSET_PMODE(r, page, PrivMode_mouse_report)) {
+      rxvt_mouse_report(r, (XButtonEvent*)ev);
+      if (!r->h->bypass_keystate) return;
+    }
 
     if (ev->xany.window == PVTS(r, page)->vt)
     {
