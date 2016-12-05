@@ -471,7 +471,7 @@
 #define MAX_BLANKDELAY		    (20)
 
 /* Default number of lines in the scrollback buffer */
-#define DEFAULT_SAVELINES	    (100)
+#define DEFAULT_SAVELINES	    (1000)
 #define MAX_SAVELINES		    (0xffff)
 
 /* Default bell throttle interval */
@@ -479,7 +479,7 @@
 #define THROTTLE_BELL_COUNT	    (3)
 
 /* Default tabstop size */
-#define TABSTOP_SIZE		    (8)
+#define TABSTOP_SIZE		    (4)
 
 /* Maximal length and display length of tab title */
 #define MAX_TAB_TXT		    (507)
