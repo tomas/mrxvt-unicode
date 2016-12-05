@@ -2961,7 +2961,7 @@ rxvt_fill_rectangle (rxvt_t* r, int page, int x, int y, unsigned int w, unsigned
 #ifdef XFT_SUPPORT
 #define XFTDRAW_STRING(xdraw, color, font, x, y, str, len)		    \
     ( ( rend & RS_acsFont) ?						    \
-      (xftDrawACSString( r->Xdisplay, d, gc,				    \
+      (xftDrawACSStringUni( r->Xdisplay, d, gc,				    \
 			 xftdraw_string,				    \
 			 (xdraw), (color), (font), (x), (y),		    \
 			 (unsigned char*) (str), (len))) :		    \
@@ -2985,6 +2985,7 @@ rxvt_draw_string_xft_uni (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
 		"rxvt_draw_string_xft (r, d, gc, refreshRegion, rend, pfont: %d, win, fore, x: %d, y: %d, str, len: %d)\n",
 		pfont, x, y, len));
     XftFont *font;
+    int fontid = ((rend & RS_fontID) >> 24);
 
     font = r->TermWin.xftfont[fontid];
     rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "\tUsing font number %d.\n", fontid));
@@ -3014,7 +3015,7 @@ rxvt_draw_string_xft_uni (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
 	/*XFTDRAW_STRING (win, &(r->TermWin.xftshadow),
 	    font, x+sx, y+sy, str, len);*/
 	if (rend & RS_acsFont)
-	    xftDrawACSString (r->Xdisplay, d, gc, win, &(r->TermWin.xftshadow), font, x + sx, y + sy, str, len);
+	    xftDrawACSStringUni (r->Xdisplay, d, gc, win, &(r->TermWin.xftshadow), font, x + sx, y + sy, str, len);
 	else
 	    XftDrawString32 (win, &(r->TermWin.xftshadow), font, x+sx, y+sy, str, len);
 	/*
@@ -3027,7 +3028,7 @@ rxvt_draw_string_xft_uni (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
 # endif	/* TEXT_SHADOW */
 
     if (rend & RS_acsFont)
-      xftDrawACSString (r->Xdisplay, d, gc, win, fore, font, x, y, str, len);
+      xftDrawACSStringUni (r->Xdisplay, d, gc, win, fore, font, x, y, str, len);
     else
 	XftDrawString32 (win, fore, font, x, y, (FcChar32*) str, len);
 }
@@ -3166,6 +3167,7 @@ rxvt_scr_draw_string_uni (rxvt_t* r, int page,
 		page, x, y, len, cols));
 #ifdef XFT_SUPPORT
     int	    fillback = 0;
+    int fontid = ((rend & RS_fontID) >> 24);
 
     switch (drawfunc) {
 	//case	XFT_DRAW_IMAGE_STRING_8:
@@ -3271,9 +3273,9 @@ rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
     }
 #ifdef MULTICHAR_SET
     else if( xftdraw_string == XftDrawStringUtf8 )
-    font = r->TermWin.xftmfont;
+    font = r->TermWin->xftmfont;
 #endif
-    else font = r->TermWin.xftfont;
+    else font = *r->TermWin.xftfont;
 
     rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "Draw: 0x%8x %p: '%.40s'\n", rend, font, str ));
 
@@ -3506,7 +3508,7 @@ rxvt_scr_draw_string (rxvt_t* r, int page,
             x, y, Width2Pixel(len * (1 + adjust)), Height2Pixel(1));
 
     /* We use TermWin.xftfont->ascent here */
-    y += r->TermWin.xftfont->ascent;
+    y += r->TermWin.font->ascent;
 
     /*
      * Xft does not support XftDrawString16, so we need to convert the
@@ -3572,7 +3574,7 @@ rxvt_scr_draw_string (rxvt_t* r, int page,
           NOTSET_OPTION(r, Opt2_xftSlowOutput)
           && (XftDrawStringUtf8 == xftdraw_string)
           && (
-          r->TermWin.xftmfont->max_advance_width ==
+          r->TermWin->xftmfont->max_advance_width ==
             (r->TermWin.fwidth << 1)
          )
        )
@@ -3607,7 +3609,7 @@ rxvt_scr_draw_string (rxvt_t* r, int page,
     else
     if (
           r->TermWin.xftfnmono && (XftDrawString8 == xftdraw_string)
-          && (r->TermWin.xftfont->max_advance_width == r->TermWin.fwidth)
+          && ((*r->TermWin.xftfont)->max_advance_width == r->TermWin.fwidth)
        )
     {
         /* print string once for 8-bits string */

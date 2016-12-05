@@ -36,7 +36,20 @@ void xftDrawACSString (
 	Display			*dpy,
 	Drawable		d,
 	GC			gc,
-	//void			(*xftdraw_string)(),
+	void			(*xftdraw_string)(),
+	XftDraw			*draw,
+	const XftColor		*color,
+	XftFont			*pub,
+	int			x,
+	int			y,
+	const unsigned char	*str,
+	int			len
+    );
+
+void xftDrawACSStringUni (
+	Display			*dpy,
+	Drawable		d,
+	GC			gc,
 	XftDraw			*draw,
 	const XftColor		*color,
 	XftFont			*pub,
@@ -44,7 +57,8 @@ void xftDrawACSString (
 	int			y,
 	const text_t		*str,
 	int			len
-    );
+);
+
 
 #endif
 /*-------------------------- end-of-file (H source) --------------------------*/

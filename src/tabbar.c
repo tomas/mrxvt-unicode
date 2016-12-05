@@ -517,7 +517,7 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
 
 	    y -= r->TermWin.xftpfont->descent;
 	}
-	else y -= r->TermWin.xftfont->descent;
+	else y -= (*r->TermWin.xftfont)->descent;
     }
     else
 #endif /* XFT_SUPPORT */
