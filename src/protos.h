@@ -222,7 +222,7 @@ int              rxvt_control_tty                 __PROTO((int fd_tty, const cha
 /* Begin prototypes of screen.c */
 void
 rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
-	int x, int y, text_t* str, int len, int cols, int drawfunc); //(*draw_string)());
+	int x, int y, char* str, int len, int drawfunc); //(*draw_string)());
 #ifdef XFT_SUPPORT
 void
 rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
@@ -441,7 +441,7 @@ void             rxvt_remove_page               __PROTO((rxvt_t*, short));
 void             rxvt_activate_page             __PROTO((rxvt_t*, short));
 void		 rxvt_tabbar_set_visible_tabs   __PROTO((rxvt_t*, Bool));
 void		 refresh_tabbar_tab		__PROTO((rxvt_t*, int));
-void             rxvt_tabbar_set_title          __PROTO((rxvt_t*, short, const text_t TAINTED *));
+void             rxvt_tabbar_set_title          __PROTO((rxvt_t*, short, const unsigned char TAINTED *));
 void             rxvt_tabbar_resize             __PROTO((rxvt_t*));
 void             rxvt_tabbar_dispatcher         __PROTO((rxvt_t*, XButtonEvent*));
 void		 rxvt_tabbar_button_release     __PROTO((rxvt_t*, XButtonEvent*));
@@ -453,7 +453,7 @@ void             rxvt_tabbar_create             __PROTO((rxvt_t*));
 void             rxvt_tabbar_clean_exit         __PROTO((rxvt_t*));
 unsigned short   rxvt_tabbar_height             __PROTO((rxvt_t*));
 unsigned short   rxvt_tabbar_rheight            __PROTO((rxvt_t*));
-unsigned int     rxvt_tab_width                 __PROTO((rxvt_t*, const text_t*));
+unsigned int     rxvt_tab_width                 __PROTO((rxvt_t*, const char *));
 int              rxvt_is_tabbar_win             __PROTO((rxvt_t*, Window));
 void             rxvt_tabbar_draw_buttons       __PROTO((rxvt_t*));
 void		 rxvt_adjust_fd_number	        __PROTO((rxvt_t* r));

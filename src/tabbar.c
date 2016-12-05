@@ -339,14 +339,13 @@ rxvt_tabbar_set_visible_tabs (rxvt_t* r, Bool refresh)
 /* INTPROTO */
 static int
 draw_string (rxvt_t* r, Region clipRegion,
-	int x, int y, text_t* str, int len,
+	int x, int y, char* str, int len,
 	__attribute__((unused)) int multichar, int active)
 {
 #ifdef XFT_SUPPORT
     XGlyphInfo	ginfo;
 #endif
 
-#if 0
 #ifdef MULTICHAR_SET
     if (multichar)
     {
@@ -363,23 +362,23 @@ draw_string (rxvt_t* r, Region clipRegion,
 		    && (iconv_t) -1 != r->TermWin.xfticonv
 	       )
 	    {
-		text_t		buf[1024];
+		char		buf[1024];
 		int		plen = 1023;
-		text_t*		pstr = buf;
+		char*		pstr = buf;
 		int		olen = len;
-		text_t*		ostr = str;
+		char*		ostr = str;
 
 		/* convert to UTF-8 */
 		iconv (r->TermWin.xfticonv, (char**) &ostr,
 		    (size_t*) &olen, &pstr, (size_t*) &plen);
-		*pstr = (text_t) 0;   /* set end of string */
+		*pstr = (char) 0;   /* set end of string */
 
 		rxvt_draw_string_xft (r, r->tabBar.win, r->tabBar.gc,
 			clipRegion, RS_None, 
 			active ? USE_BOLD_PFONT : USE_PFONT,
 			r->tabBar.xftwin,
 			active ? &(r->tabBar.xftfg) : &(r->tabBar.xftifg),
-			x, y, buf, len);
+			x, y, buf, len, XftDrawStringUtf8);
 		if( r->TermWin.xftpfont )
 		{
 		    XftTextExtentsUtf8( r->Xdisplay, r->TermWin.xftpfont,
@@ -397,7 +396,7 @@ draw_string (rxvt_t* r, Region clipRegion,
 			active ? USE_BOLD_PFONT : USE_PFONT,
 			r->tabBar.xftwin,
 			active ? &(r->tabBar.xftfg) : &(r->tabBar.xftifg),
-			x, y, str, len);
+			x, y, str, len, XftDrawString8);
 
 		if( r->TermWin.xftpfont )
 		{
@@ -430,7 +429,6 @@ draw_string (rxvt_t* r, Region clipRegion,
 
     else
 #endif /* MULTICHAR_SET */
-#endif
     {
 	/*
 	 * Draw the non-multichar string
@@ -443,26 +441,23 @@ draw_string (rxvt_t* r, Region clipRegion,
 		    active ? USE_BOLD_PFONT : USE_PFONT,
 		    r->tabBar.xftwin,
 		    active ? &(r->tabBar.xftfg) : &(r->tabBar.xftifg),
-		    x, y, str, len);
+		    x, y, str, len, XftDrawString8);
 
-	    if (r->TermWin.xftpfont)
+	    if( r->TermWin.xftpfont )
 	    {
-		/*XftTextExtents8( r->Xdisplay, r->TermWin.xftpfont,
-			(unsigned char*) str, len, &ginfo);*/
-		XftTextExtents32( r->Xdisplay, r->TermWin.xftpfont,
-			(FcChar32*) str, len, &ginfo);
+		XftTextExtents8( r->Xdisplay, r->TermWin.xftpfont,
+			(unsigned char*) str, len, &ginfo);
 		return ginfo.width;
 	    }
-	    else
-		return Width2Pixel (len);
+	    else return Width2Pixel( len );
 	}
 	else
 # endif	/* XFT_SUPPORT */
 	{
 	    XSetFont (r->Xdisplay, r->tabBar.gc, r->TermWin.font->fid);
 	    rxvt_draw_string_x11 (r, r->tabBar.win, r->tabBar.gc,
-		    clipRegion, x, y, str, len, len, 1); //X11_DRAW_STRING); // TODO
-	    return Width2Pixel (len);
+		    clipRegion, x, y, str, len, XDrawString);
+	    return Width2Pixel( len );
 	}
     }
 }
@@ -479,17 +474,14 @@ static void
 draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
 {
     Region	clipRegion;
-    text_t	str[MAX_DISPLAY_TAB_TXT + 1];
-    unsigned int title_len = min (PVTS(r,tnum)->tab_title_length, r->TermWin.maxTabWidth);
+    char	str[MAX_DISPLAY_TAB_TXT + 1];
 
-#if 0
 #ifdef MULTICHAR_SET
     char	buf[MAX_TAB_TXT + 1];
     const char*	sptr;
     const char*	ptr;
     int		multichar;
     int		len;
-#endif
 #endif
 
     UNSET_REGION( clipRegion );
@@ -512,7 +504,7 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
 
 	    rect.x = x;
 	    rect.y = y - r->TermWin.pheight;
-	    rect.width = PVTS(r, tnum)->tab_width - 2 * TXT_XOFF;
+	    rect.width = PVTS(r, tnum)->tab_width - 2*TXT_XOFF;
 	    rect.height = r->TermWin.pheight;
 
 	    clipRegion = XCreateRegion();
@@ -525,8 +517,7 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
 
 	    y -= r->TermWin.xftpfont->descent;
 	}
-	else
-	    y -= r->TermWin.xftfont[0]->descent; // TODO
+	else y -= r->TermWin.xftfont->descent;
     }
     else
 #endif /* XFT_SUPPORT */
@@ -538,13 +529,12 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
      */
 #ifdef XFT_SUPPORT
     if(
-	  NOTSET_OPTION (r, Opt_xft)			||
-	  IS_NULL (r->TermWin.xftpfont)			||
-	  IS_NULL (PVTS(r, tnum)->title_format)   	||
+	  NOTSET_OPTION( r, Opt_xft )			||
+	  IS_NULL( r->TermWin.xftpfont )		||
+	  IS_NULL( PVTS(r, tnum)->title_format )   	||
 	  rxvt_percent_interpolate( r, tnum,
 		PVTS(r, tnum)->title_format,
-		//STRLEN( PVTS(r, tnum)->title_format ),
-		PVTS(r, tnum)->title_format_length,
+		STRLEN( PVTS(r, tnum)->title_format ),
 		str, r->TermWin.maxTabWidth ) <= 1
       )
 #endif /* XFT_SUPPORT */
@@ -558,21 +548,16 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
 	 */
 	if( ISSET_OPTION( r, Opt3_chopEnd ) )
 	{
-	    //STRNCPY( str, PVTS(r,tnum)->tab_title , r->TermWin.maxTabWidth );
-	    MEMCPY (str, PVTS(r,tnum)->tab_title , sizeof (text_t) * title_len); //r->TermWin.maxTabWidth);
-	    //str[r->TermWin.maxTabWidth] = '\0';
-	    str[title_len] = '\0';
+	    STRNCPY( str, PVTS(r,tnum)->tab_title , r->TermWin.maxTabWidth );
+	    str[r->TermWin.maxTabWidth] = '\0';
 	}
 	else
 	{
-	    //title_len = STRLEN(PVTS(r,tnum)->tab_title);
-	    //int excess = max(title_len - r->TermWin.maxTabWidth, 0);
-	    int excess = max(r->TermWin.maxTabWidth - title_len, 0);
+	    int title_len = STRLEN(PVTS(r,tnum)->tab_title);
+	    int excess = max(title_len - r->TermWin.maxTabWidth, 0);
 
-	    //STRNCPY( str, PVTS(r,tnum)->tab_title + excess,
-		//     r->TermWin.maxTabWidth + 1 );  /* + 1 ensures we get \0 */
-	    MEMCPY (str, PVTS(r,tnum)->tab_title + excess,
-		     title_len * sizeof (text_t)); //r->TermWin.maxTabWidth + 1 );  /* + 1 ensures we get \0 */
+	    STRNCPY( str, PVTS(r,tnum)->tab_title + excess,
+		     r->TermWin.maxTabWidth + 1 );  /* + 1 ensures we get \0 */
 	}
     }
 
@@ -580,7 +565,6 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
     /*
      * Draw the string (different code for multichar / non-multichar).
      */
-#if 0
 #ifdef MULTICHAR_SET
     sptr = ptr = str;
     multichar = (*ptr & 0x80);
@@ -648,9 +632,6 @@ draw_title (rxvt_t* r, int x, int y, int tnum, Region region)
     draw_string (r, clipRegion,
 	    x, y, str, STRLEN(str), False, tnum == ATAB(r));
 #endif	/* MULTICHAR_SET */
-#endif
-    draw_string (r, clipRegion,
-	    x, y, str, title_len /*STRLEN(str)*/, False, tnum == ATAB(r));
 
     /*
      * Restore clipping of the xftdrawable / gc.
@@ -752,8 +733,8 @@ void rxvt_draw_tabs (rxvt_t* r, Region region)
 	 */
 
 	if( (page == ATAB(r)) || 
-		((NOT_NULL(&PVTS(r, page)->monitor_tab)) && 
-		 (PVTS(r,page)->monitor_tab == TAB_MON_NOTIFICATION)) 
+ 	    ((NOT_NULL(&PVTS(r, page)->monitor_tab)) && 
+	     (PVTS(r,page)->monitor_tab == TAB_MON_NOTIFICATION)) 
 	  )
 	{
 	    /* 
@@ -761,12 +742,12 @@ void rxvt_draw_tabs (rxvt_t* r, Region region)
 	     * active tab
 	     */
 	    if ((page == ATAB(r)) && 
-		    (PVTS(r,page)->monitor_tab == TAB_MON_NOTIFICATION))
+		(PVTS(r,page)->monitor_tab == TAB_MON_NOTIFICATION))
 	    {
-		rxvt_msg (DBG_INFO, DBG_MACROS,  
-			"Macro MonitorTab: monitored tab %i is now the active tab", page);
-		PVTS(r,page)->monitor_tab = TAB_MON_OFF;
-	    }
+	      rxvt_msg (DBG_INFO, DBG_MACROS,  
+		      "Macro MonitorTab: monitored tab %i is now the active tab", page);
+	      PVTS(r,page)->monitor_tab = TAB_MON_OFF;
+            }
 	    /*
 	     * Draw the active tab, and bottom line of the tabbar.
 	     */
@@ -838,7 +819,7 @@ void rxvt_draw_tabs (rxvt_t* r, Region region)
 #endif
 #ifdef TRANSPARENT
 	    if ( ( r->h->am_transparent || r->h->am_pixmap_trans ) &&
-		    ISSET_OPTION(r, Opt_transparent_tabbar))
+		ISSET_OPTION(r, Opt_transparent_tabbar))
 		clear = 1;  /* transparent override background image */
 #endif
 
@@ -968,7 +949,7 @@ void rxvt_draw_tabs (rxvt_t* r, Region region)
 	    CHOOSE_GC_FG( r, r->tabBar.ifg);
 	    draw_title (r, x + TXT_XOFF,
 		    ISSET_OPTION(r, Opt2_bottomTabbar) ?
-		    TXT_YOFF : ATAB_EXTRA + TXT_YOFF,
+		     	    TXT_YOFF : ATAB_EXTRA + TXT_YOFF,
 		    page, region);
 
 	    /* Highlight the tab if necessary */
@@ -1480,7 +1461,7 @@ rxvt_append_page( rxvt_t* r, int profile,
     /* synchronize icon name to tab title */
     if (ISSET_OPTION(r, Opt2_syncTabIcon))
 	rxvt_set_icon_name (r,
-		(const text_t*) PVTS(r, ATAB(r))->tab_title);
+		(const unsigned char*) PVTS(r, ATAB(r))->tab_title);
 }
 
 
@@ -1532,20 +1513,20 @@ rxvt_remove_page (rxvt_t* r, short page)
     LTAB(r)--;
     rxvt_dbgmsg ((DBG_DEBUG, DBG_TABBAR, "\tThe last tab is %d.", LTAB(r)));
 
-    /*if (FVTAB(r) > page)
+    if (FVTAB(r) > page)
 	FVTAB(r)--;
     if (LVTAB(r) > page)
     {
-	//refresh_tabbar_tab( r, (LVTAB(r)));
+	refresh_tabbar_tab (r, LVTAB (r));
 	LVTAB(r)--;
-    }*/
+    }
     /* Reorganize the tabs array. */
     /* update TermWin and tab_widths */
     for (i = page; i <= LTAB(r); i++)
     {
 	PVTS(r, i) = PVTS(r, i+1);
 	PVTS(r, i)->vts_idx = i;
-	//refresh_tabbar_tab( r, i);
+	refresh_tabbar_tab( r, i);
     }
 
     {
@@ -1635,24 +1616,22 @@ rxvt_remove_page (rxvt_t* r, short page)
     /* synchronize icon name to tab title */
     if (ISSET_OPTION(r, Opt2_syncTabIcon))
 	rxvt_set_icon_name(r,
-		(const text_t*) PVTS(r, ATAB(r))->tab_title);
+		(const unsigned char*) PVTS(r, ATAB(r))->tab_title);
 }
 
 
 /*
- * Set new title for a tab.
- * Same as rxvt_tabbar_set_title, but using a char* as parameter. 
+ * Set new title for a tab
  */
 /* EXTPROTO */
 void
-rxvt_tabbar_set_title_from_char (rxvt_t* r, short page, const char TAINTED * str)
+rxvt_tabbar_set_title (rxvt_t* r, short page, const unsigned char TAINTED * str)
 {
     char UNTAINTED *	    n_title;
 
     assert (str);
     assert (page >= 0 && page <= LTAB(r));
     assert (PVTS(r, page)->tab_title);
-    int str_len = STRLEN (str);
 
     n_title = STRNDUP (str, MAX_TAB_TXT);
     /*
@@ -1661,74 +1640,11 @@ rxvt_tabbar_set_title_from_char (rxvt_t* r, short page, const char TAINTED * str
     if (NULL != n_title)
     {
 	rxvt_free (PVTS(r, page)->tab_title);
-	//PVTS(r, page)->tab_title = n_title;
-	//PVTS(r, page)->tab_title_length = str_len;
-	PVTS(r, page)->tab_title_length = from_char_to_text (r, n_title, str_len, PVTS(r, page)->tab_title);
-
-	/* Compute the new width of the tab */
-	PVTS(r, page)->tab_width = rxvt_tab_width (r, n_title);
-    }
-    else
-	rxvt_free (n_title);
-
-    /*
-     * If visible tab's title is changed, refresh tab bar
-     */
-    if (page >= FVTAB(r) && page <= LVTAB(r))
-    {
-	/* adjust visible tabs */
-	rxvt_tabbar_set_visible_tabs (r, True);
-	refresh_tabbar_tab (r, page);
-    }
-
-    /* synchronize terminal title with active tab title */
-    if (ISSET_OPTION(r, Opt2_syncTabTitle) &&
-	(page == ATAB(r)))
-	sync_tab_title( r, ATAB(r) );
-
-    /* synchronize icon name to tab title */
-    if (ISSET_OPTION(r, Opt2_syncTabIcon) && page == ATAB(r))
-	rxvt_set_icon_name (r, (const text_t*) PVTS(r, ATAB(r))->tab_title);
-}
-/*
- * Set new title for a tab
- */
-/* EXTPROTO */
-void
-rxvt_tabbar_set_title (rxvt_t* r, short page, const text_t TAINTED * str)
-{
-    text_t UNTAINTED *	    n_title;
-
-    assert (str);
-    assert (page >= 0 && page <= LTAB(r));
-    assert (PVTS(r, page)->tab_title);
-    int str_len = 0;
-
-    while (str_len < MAX_TAB_TXT)
-    {
-	if (str[str_len] == 0)
-	    break;
-	str_len++;
-    }
-    str_len++;
-    
-    n_title = rxvt_malloc (str_len * sizeof (text_t));
-    //n_title = STRNDUP (str, MAX_TAB_TXT);
-    /*
-     * If strdup succeeds, set new title
-     */
-    //if (NULL != n_title)
-    if (MEMCPY (n_title, str, str_len * sizeof (text_t)) != NULL)
-    {
-	rxvt_free (PVTS(r, page)->tab_title);
 	PVTS(r, page)->tab_title = n_title;
-	PVTS(r, page)->tab_title_length = str_len;
 
 	/* Compute the new width of the tab */
 	PVTS(r, page)->tab_width = rxvt_tab_width (r, n_title);
     }
-    else
-	rxvt_free (n_title);
 
     /*
      * If visible tab's title is changed, refresh tab bar
@@ -1737,7 +1653,7 @@ rxvt_tabbar_set_title (rxvt_t* r, short page, const text_t TAINTED * str)
     {
 	/* adjust visible tabs */
 	rxvt_tabbar_set_visible_tabs (r, True);
-	refresh_tabbar_tab (r, page);
+	refresh_tabbar_tab(r, page);
     }
 
     /* synchronize terminal title with active tab title */
@@ -1746,8 +1662,10 @@ rxvt_tabbar_set_title (rxvt_t* r, short page, const text_t TAINTED * str)
 	sync_tab_title( r, ATAB(r) );
 
     /* synchronize icon name to tab title */
-    if (ISSET_OPTION(r, Opt2_syncTabIcon) && page == ATAB(r))
-	rxvt_set_icon_name (r, (const text_t*) PVTS(r, ATAB(r))->tab_title);
+    if (ISSET_OPTION(r, Opt2_syncTabIcon) &&
+	(page == ATAB(r)))
+	rxvt_set_icon_name(r,
+		(const unsigned char*) PVTS(r, ATAB(r))->tab_title);
 }
 
 
@@ -2053,43 +1971,43 @@ rxvt_tabbar_visible (rxvt_t* r)
 void
 rxvt_tabbar_expose (rxvt_t* r, XEvent *ev)
 {
-    Region region;
-    UNSET_REGION(region);
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_TABBAR,  "rxvt_tabbar_expose (r, ev)\n"));
+	Region region;
+	UNSET_REGION(region);
+	rxvt_dbgmsg ((DBG_DEBUG, DBG_TABBAR,  "rxvt_tabbar_expose (r, ev)\n"));
 
-    if( ev && ev->type == Expose)
-    {
-	region = XCreateRegion();
-
-	do
+	if( ev && ev->type == Expose)
 	{
-	    XRectangle rect;
-	    Region region_temp = XCreateRegion ();
+		region = XCreateRegion();
 
-	    rect.x	= ev->xexpose.x;
-	    rect.y	= ev->xexpose.y;
-	    rect.width	= ev->xexpose.width;
-	    rect.height	= ev->xexpose.height;
+		do
+		{
+			XRectangle rect;
+			Region region_temp = XCreateRegion ();
 
-	    /* Not sure this is necessary,
-	     * but I had a segmentation fault issue without this. */
-	    XUnionRectWithRegion( &rect, region_temp, region_temp);
-	    XUnionRegion(region_temp, region, region);
-	    XDestroyRegion( region_temp );
+			rect.x	= ev->xexpose.x;
+			rect.y	= ev->xexpose.y;
+			rect.width	= ev->xexpose.width;
+			rect.height	= ev->xexpose.height;
+
+			/* Not sure this is necessary,
+			 * but I had a segmentation fault issue without this. */
+			XUnionRectWithRegion( &rect, region_temp, region_temp);
+			XUnionRegion(region_temp, region, region);
+			XDestroyRegion( region_temp );
+		}
+		while( XCheckTypedWindowEvent( r->Xdisplay, r->tabBar.win,
+					Expose, ev));
 	}
-	while( XCheckTypedWindowEvent( r->Xdisplay, r->tabBar.win,
-		    Expose, ev));
-    }
-    else XClearWindow (r->Xdisplay, r->tabBar.win);
+	else XClearWindow (r->Xdisplay, r->tabBar.win);
 
-    /* draw the tabs and blank space*/
-    rxvt_draw_tabs(r, region);
+	/* draw the tabs and blank space*/
+	rxvt_draw_tabs(r, region);
 
-    /* draw the buttons */
-    rxvt_tabbar_draw_buttons (r);
+	/* draw the buttons */
+	rxvt_tabbar_draw_buttons (r);
 
-    if (IS_REGION(region))
-	XDestroyRegion( region );
+	if (IS_REGION(region))
+		XDestroyRegion( region );
 }
 
 
@@ -2429,6 +2347,7 @@ rxvt_tabbar_clean_exit (rxvt_t* r)
 {
     register int    i;
 
+
     UNSET_WIN(r->tabBar.win);	/* destroyed by XDestroySubwindows */
 
     /* free resource strings */
@@ -2499,7 +2418,7 @@ rxvt_tabbar_rheight (rxvt_t* r)
 
 /* EXTPROTO */
 unsigned int
-rxvt_tab_width (rxvt_t *r, const text_t* str)
+rxvt_tab_width (rxvt_t *r, const char *str)
 {
 #ifdef XFT_SUPPORT
     if ( ISSET_OPTION (r, Opt_xft) && r->TermWin.xftpfont)
@@ -2522,42 +2441,21 @@ rxvt_tab_width (rxvt_t *r, const text_t* str)
     else
 #endif
     {
-	int	    len = 0;
+	int	    len;
 	uint16_t    maxw = r->TermWin.maxTabWidth;
 
 	assert (str);
-	while (len < MAX_TAB_TXT)
-	{
-	    if (str + len == 0)
-		break;
-	    len++;
-	}
-	//len = STRLEN (str);
-	
+	len = STRLEN (str);
 	if (len > maxw)
 	    len = maxw;
 #ifdef XFT_SUPPORT
 	if (ISSET_OPTION (r, Opt_xft) && (NULL != r->tabBar.xftwin))
 	{
-	    XGlyphInfo extents;
-	    XftTextExtents32 (r->Xdisplay, r->TermWin.xftfont[0], (FcChar32*) str, len, &extents); // TODO
-	    //return (2 * TXT_XOFF + Width2Pixel(len));
-	    return (2 * TXT_XOFF + extents.xOff);
+	    return (2 * TXT_XOFF + Width2Pixel(len));
 	}
 	else
 #endif	/* XFT_SUPPORT */
-	{
-	    XRectangle xrect;
-	    XFontSet fontset = r->TermWin.fontset;
-	    if (NOT_NULL (fontset))
-	    {
-		    XwcTextExtents (fontset, (wchar_t*) str, len, NULL, &xrect);
-		    return (2 * TXT_XOFF + xrect.width);
-	    }
-	    else
-		//return (2 * TXT_XOFF + XTextWidth (r->TermWin.font, str, len));
-		return (2 * TXT_XOFF + Col2Pixel (len));
-	}
+	return (2 * TXT_XOFF + XTextWidth (r->TermWin.font, str, len));
     }
 }
 
@@ -2772,77 +2670,22 @@ rxvt_tabbar_move_tab (rxvt_t* r, short newPage)
  * Synchronize the window title to the title of the tab "page".
  */
 void
-sync_tab_title (rxvt_t *r, int page)
+sync_tab_title( rxvt_t *r, int page )
 {
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_TABBAR,  "rxvt_tab_title (r, page: %d)\n", page));
-    text_t wintitle[MAX_TAB_TXT];
+    char wintitle[MAX_TAB_TXT];
 
     if(
-	 IS_NULL (PVTS(r,page)->winTitleFormat )	||
-	 rxvt_percent_interpolate (r, page,
-	     PVTS(r,page)->winTitleFormat, //STRLEN(PVTS(r,page)->winTitleFormat),
-	     PVTS(r,page)->winTitleFormat_length,
-	     wintitle, MAX_TAB_TXT) <= 1
+	 IS_NULL( PVTS(r,page)->winTitleFormat )	||
+	 rxvt_percent_interpolate( r, page,
+	     PVTS(r,page)->winTitleFormat, STRLEN(PVTS(r,page)->winTitleFormat),
+	     wintitle, MAX_TAB_TXT ) <= 1
       )
     {
 	/* % interpolation failed / not possible */
-	char* tab_title = PVTS(r, page)->tab_title;
-#ifdef HAVE_ICONV_H
-	char** text_input = (char**) &tab_title;
-#else
-	const char** text_input = (const char**) &tab_title;
-#endif
-	size_t text_left = PVTS(r, page)->tab_title_length * sizeof (text_t); 
-
-	//PVTS(r, page)->title_format = rxvt_malloc (r->TermWin.maxTabWidth * sizeof (text_t));
-	char* str_to_sync = rxvt_malloc (PVTS(r, page)->tab_title_length * 4 + 1);
-	char* str_to_sync_copy = str_to_sync;
-	char** byte_output = &str_to_sync_copy;
-	size_t byte_left = PVTS(r, page)->tab_title_length * 4 + 1;
-#ifdef HAVE_ICONV_H
-	//size_t text_left = r->TermWin.maxTabWidth * sizeof (text_t);
-	iconv (r->TermWin.external_converter, NULL, NULL, NULL, NULL);
-	iconv (r->TermWin.external_converter, text_input, &text_left, byte_output, &byte_left); 
-	//PVTS(r, page)->title_format_length = r->TermWin.maxTabWidth - byte_left;
-	**byte_output = '\0';
-#else
-	//size_t text_left = r->TermWin.maxTabWidth;
-	mbsrtowcs (*byte_output, text_input, byte_left, r->TermWin.external_converter);
-#endif
-	//rxvt_set_term_title (r, (text_t*) PVTS(r, page)->tab_title);
-	rxvt_set_term_title (r, (unsigned char*) str_to_sync);
-	rxvt_free (str_to_sync);
+	rxvt_set_term_title( r, (unsigned char*) PVTS(r, page)->tab_title );
     }
     else
-    {
-	char* tab_title = (char*) wintitle;
-#ifdef HAVE_ICONV_H
-	char** text_input = (char**) &tab_title;
-#else
-	const char** text_input = (const char**) &tab_title;
-#endif
-	size_t text_left = MAX_TAB_TXT * sizeof (text_t); 
-
-	//PVTS(r, page)->title_format = rxvt_malloc (r->TermWin.maxTabWidth * sizeof (text_t));
-	char* str_to_sync = rxvt_malloc (MAX_TAB_TXT * 4 + 1);
-	char* str_to_sync_copy = str_to_sync;
-	char** byte_output = &str_to_sync_copy;
-	size_t byte_left = MAX_TAB_TXT * 4 + 1;
-#ifdef HAVE_ICONV_H
-	//size_t text_left = r->TermWin.maxTabWidth * sizeof (text_t);
-	iconv (r->TermWin.external_converter, NULL, NULL, NULL, NULL);
-	iconv (r->TermWin.external_converter, text_input, &text_left, byte_output, &byte_left); 
-	//PVTS(r, page)->title_format_length = r->TermWin.maxTabWidth - byte_left;
-	**byte_output = '\0';
-#else
-	//size_t text_left = r->TermWin.maxTabWidth;
-	mbsrtowcs (byte_output, text_input, byte_left, r->TermWin.external_converter);
-#endif
-	//rxvt_set_term_title (r, (text_t*) PVTS(r, page)->tab_title);
-	rxvt_set_term_title (r, (unsigned char*) str_to_sync);
-	rxvt_free (str_to_sync);
-	//rxvt_set_term_title (r, (text_t*) wintitle );
-    }
+	rxvt_set_term_title( r, (unsigned char*) wintitle );
 }
 
 /*----------------------- end-of-file (C source) -----------------------*/

@@ -3062,7 +3062,7 @@ rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
 /* EXTPROTO */
 void
 rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
-	int x, int y, text_t* str, int len, int cols, int drawfunc) //(*draw_string)())
+	int x, int y, char* str, int len, int drawfunc) //(*draw_string)())
 {
     rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "rxvt_draw_string_x11 (r, win, gc, region, x: %d, y: %d, str, len: %d, ...)", x, y, len));
 # ifdef TEXT_SHADOW
@@ -3112,8 +3112,8 @@ rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
 	    XSetFillStyle( r->Xdisplay, gc, FillSolid);
 	    XFillRectangle( r->Xdisplay, win, gc,
 		    x, y - font->ascent,
-		    //Width2Pixel (len * 2),
-		    Width2Pixel (cols),
+		    Width2Pixel (len * 2),
+		    // Width2Pixel (cols),
 		    //escapement,
 		    font->ascent + font->descent);
 		    //charstruct.width, font->ascent + font->descent);
@@ -3455,7 +3455,7 @@ rxvt_scr_draw_string (rxvt_t* r, int page,
 	/* Now draw the string */
 	//if (draw_string)
 	    rxvt_draw_string_x11 (r, PVTS(r, page)->vt, r->TermWin.gc,
-		    refreshRegion, x, y, str, len, cols, drawfunc); //draw_string);
+		    refreshRegion, x, y, str, len, drawfunc); //draw_string);
     }
 }
 
