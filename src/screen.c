@@ -175,7 +175,7 @@ void static inline rxvt_clear_area       (rxvt_t*, int page, int x, int y, unsig
 void static inline rxvt_fill_rectangle   (rxvt_t*, int page, int x, int y, unsigned int w, unsigned int h);
 void
 rxvt_scr_draw_string (rxvt_t* r, int page,
-	int x, int y, text_t* str, int len, int cols, int drawfunc,
+	int x, int y, char* str, int len, int drawfunc,
 	uint16_t fore, uint16_t back,
 	__attribute__((unused)) rend_t rend, Region refreshRegion);
 void rxvt_scr_adjust_col          (rxvt_t*, int, unsigned int);
@@ -2939,32 +2939,26 @@ rxvt_fill_rectangle (rxvt_t* r, int page, int x, int y, unsigned int w, unsigned
  */
 
 
-#if 0
-#define X11_DRAW_STRING_8	    (1)
-#define X11_DRAW_STRING_16	    (2)
-#define X11_DRAW_IMAGE_STRING_8	    (3)
+#define X11_DRAW_STRING_8       (1)
+#define X11_DRAW_STRING_16      (2)
+#define X11_DRAW_IMAGE_STRING_8     (3)
 #define X11_DRAW_IMAGE_STRING_16    (4)
-#define XFT_DRAW_STRING_8	    (5)
-#define XFT_DRAW_STRING_16	    (6)
-#define XFT_DRAW_STRING_32	    (7)
-#define XFT_DRAW_STRING_UTF8	    (8)
-#define XFT_DRAW_IMAGE_STRING_8	    (9)
+#define XFT_DRAW_STRING_8       (5)
+#define XFT_DRAW_STRING_16      (6)
+#define XFT_DRAW_STRING_32      (7)
+#define XFT_DRAW_STRING_UTF8        (8)
+#define XFT_DRAW_IMAGE_STRING_8     (9)
 #define XFT_DRAW_IMAGE_STRING_16    (10)
 #define XFT_DRAW_IMAGE_STRING_32    (11)
 #define XFT_DRAW_IMAGE_STRING_UTF8  (12)
-#endif
-#define X11_DRAW_STRING		    (1)
-#define X11_DRAW_IMAGE_STRING	    (3)
-#define XFT_DRAW_STRING		    (5)
-#define XFT_DRAW_IMAGE_STRING    (11)
 
 #ifdef XFT_SUPPORT
-#define XFTDRAW_STRING(xdraw, color, font, x, y, str, len)		    \
-    ( ( rend & RS_acsFont) ?						    \
-      (xftDrawACSString( r->Xdisplay, d, gc,				    \
-			 xftdraw_string,				    \
-			 (xdraw), (color), (font), (x), (y),		    \
-			 (unsigned char*) (str), (len))) :		    \
+#define XFTDRAW_STRING(xdraw, color, font, x, y, str, len)          \
+    ( ( rend & RS_acsFont) ?                            \
+      (xftDrawACSString( r->Xdisplay, d, gc,                    \
+             xftdraw_string,                    \
+             (xdraw), (color), (font), (x), (y),            \
+             (unsigned char*) (str), (len))) :          \
       (xftdraw_string( (xdraw), (color), (font), (x), (y), (str), (len))))
 /*
  * len: number of characters to draw. for UTF-8 string, it is the
@@ -2978,82 +2972,85 @@ rxvt_fill_rectangle (rxvt_t* r, int page, int x, int y, unsigned int w, unsigned
 /* EXTPROTO */
 void
 rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
-	rend_t rend, int pfont,
-	XftDraw* win, XftColor* fore, int x, int y, text_t* str, int len)
+    rend_t rend, int pfont,
+    XftDraw* win, XftColor* fore, int x, int y, char* str, int len,
+    void (*xftdraw_string)())
 {
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN,
-		"rxvt_draw_string_xft (r, d, gc, refreshRegion, rend, pfont: %d, win, fore, x: %d, y: %d, str, len: %d)\n",
-		pfont, x, y, len));
     XftFont *font;
-    int fontid = ((rend & RS_fontID) >> 24);
-    //printf ("fontid = %X\n", rend);
 
     /*
      * If "multichar" stuff is needed in tab titles etc, then xftpfont /
      * xftPfont must be multichar capable. If that's not an option, then set
      * xftpfont to NULL, and the correct multichar font will be used.
      */
-    /*if( pfont && r->TermWin.xftpfont )
+    if( pfont && r->TermWin.xftpfont )
     {
-	font = ( pfont == USE_BOLD_PFONT) ?
-	    r->TermWin.xftPfont : r->TermWin.xftpfont;
-    }*/
-#if 0
+    font = ( pfont == USE_BOLD_PFONT) ?
+        r->TermWin.xftPfont : r->TermWin.xftpfont;
+    }
 #ifdef MULTICHAR_SET
-    else
-	font = r->TermWin.xftmfont;
+    else if( xftdraw_string == XftDrawStringUtf8 )
+    font = r->TermWin.xftmfont;
 #endif
-#endif
-    //else
-    font = r->TermWin.xftfont[fontid];
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "\tUsing font number %d.\n", fontid));
+    else font = r->TermWin.xftfont;
 
-    //rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "Draw: 0x%8x %p: '%.40s'\n", rend, font, str ));
+    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "Draw: 0x%8x %p: '%.40s'\n", rend, font, str ));
+
+#ifdef MULTICHAR_SET
+    if( xftdraw_string == XftDrawStringUtf8 )
+    len = STRLEN( str);
+#endif
 
 # ifdef TEXT_SHADOW
     if (r->h->rs[Rs_textShadow] && SHADOW_NONE != r->TermWin.shadow_mode)
     {
-	/*
-	 * Get the bounding box of the rectangle we would draw, and clip to it.
-	 */
-	XGlyphInfo  extents;
-	int	sx, sy;	/* Shadow offsets */
+    /*
+     * Get the bounding box of the rectangle we would draw, and clip to it.
+     */
+    void        (*xftTextExtents)() = NULL; /* Suppress compile warning */
+    XGlyphInfo  extents;
 
-	rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "\tHandling text shadow.\n")); // for %s (%d)\n", str, len));
+    int sx, sy; /* Shadow offsets */
 
-	XftTextExtents32 (r->Xdisplay, font, (FcChar32*) str, len, &extents);
+    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "handling text shadow for %s (%d)\n", str, len));
 
-	/*
-	 * We should ignore extents.height. The height of the drawn text might
-	 * be much smaller than the height of the font (which is really what
-	 * we've reserved space for.
-	 */
-	rxvt_set_clipping (r, win, gc, refreshRegion,
-		x, y - font->ascent, extents.width - extents.x, font->height,
-		&sx, &sy);
-
-	/*XFTDRAW_STRING (win, &(r->TermWin.xftshadow),
-	    font, x+sx, y+sy, str, len);*/
-	if (rend & RS_acsFont)
-	    xftDrawACSString (r->Xdisplay, d, gc, win, &(r->TermWin.xftshadow), font, x + sx, y + sy, str, len);
-	else
-	    XftDrawString32 (win, &(r->TermWin.xftshadow), font, x+sx, y+sy, str, len);
-	/*
-	 * We need to free clipping area, otherwise text on screen may be
-	 * clipped unexpectedly. Is there a better way to unset it, say,
-	 * XUnsetClipRectangles?
-	 */
-	rxvt_free_clipping (r, win, gc, refreshRegion);
-    }
-# endif	/* TEXT_SHADOW */
-
-    if (rend & RS_acsFont)
-      xftDrawACSString (r->Xdisplay, d, gc, win, fore, font, x, y, str, len);
+    if( xftdraw_string == XftDrawString8 )
+        xftTextExtents = XftTextExtents8;
+    else if( xftdraw_string == XftDrawString16)
+        xftTextExtents = XftTextExtents16;
+    else if( xftdraw_string == XftDrawString32)
+        xftTextExtents = XftTextExtents32;
+    else if( xftdraw_string == XftDrawStringUtf8)
+        xftTextExtents = XftTextExtentsUtf8;
     else
-	XftDrawString32 (win, fore, font, x, y, (FcChar32*) str, len);
+        assert(0); /* Shouldn't happen */
+
+    xftTextExtents( r->Xdisplay, font, str, len, &extents);
+
+    /*
+     * We should ignore extents.height. The height of the drawn text might
+     * be much smaller than the height of the font (which is really what
+     * we've reserved space for.
+     */
+    rxvt_set_clipping( r, win, gc, refreshRegion,
+        x, y - font->ascent, extents.width - extents.x, font->height,
+        &sx, &sy);
+
+    XFTDRAW_STRING (win, &(r->TermWin.xftshadow),
+        font, x+sx, y+sy, str, len);
+    /*
+     * We need to free clipping area, otherwise text on screen may be
+     * clipped unexpectedly. Is there a better way to unset it, say,
+     * XUnsetClipRectangles?
+     */
+    rxvt_free_clipping (r, win, gc, refreshRegion);
+    }
+# endif /* TEXT_SHADOW */
+
+    XFTDRAW_STRING (win, fore, font, x, y, str, len);
 }
 #undef XFTDRAW_STRING
-#endif	/* XFT_SUPPORT */
+#endif  /* XFT_SUPPORT */
 
 
 /*
@@ -3062,121 +3059,103 @@ rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
 /* EXTPROTO */
 void
 rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
-	int x, int y, char* str, int len, int drawfunc) //(*draw_string)())
+    int x, int y, char* str, int len, int (*draw_string)())
 {
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "rxvt_draw_string_x11 (r, win, gc, region, x: %d, y: %d, str, len: %d, ...)", x, y, len));
 # ifdef TEXT_SHADOW
     while (r->h->rs[Rs_textShadow] && SHADOW_NONE != r->TermWin.shadow_mode)
-//# endif	/* TEXT_SHADOW */
     {
-	int escapement;
-	int	sx, sy;
-	XGCValues   gcvalue;
+    int sx, sy;
+    XGCValues   gcvalue;
 
-	//int	    (*xtextextents)();
-	//int	    unused_dir, ascent, descent;
-	//XCharStruct charstruct;
-	GContext    gid = XGContextFromGC( gc );
-	XFontStruct *font = XQueryFont( r->Xdisplay, gid);
+    int     (*xtextextents)();
+    int     unused_dir, ascent, descent;
+    XCharStruct charstruct;
+    GContext    gid = XGContextFromGC( gc );
+    XFontStruct *font = XQueryFont( r->Xdisplay, gid);
 
-//#ifdef TEXT_SHADOW
-	if( font == NULL )
-	    break;
-//#endif
-	rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "handling text shadow for %s (%d)\n", str, len));
+    if( font == NULL ) break;
+    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "handling text shadow for %s (%d)\n", str, len));
 
-	/*
-	 * Save the old GC values foreground.
-	 */
-	XGetGCValues (r->Xdisplay, gc,
-		GCForeground | GCBackground | GCFillStyle, &gcvalue);
+    /*
+     * Save the old GC values foreground.
+     */
+    XGetGCValues (r->Xdisplay, gc,
+        GCForeground | GCBackground | GCFillStyle, &gcvalue);
 
-	/*
-	 * Get the bounding box of the rectangle we would draw, and clip to it.
-	 */
-	//xtextextents( font, str, len,
-	//	&unused_dir, &ascent, &descent, &charstruct);
-	// XwcTextExtents ??!
-	escapement = XwcTextEscapement (r->TermWin.fontset, (wchar_t*) str, len);
-
-	/*
-	 * If we're using XDrawImageString, then when we draw the actual text,
-	 * the shadow will be erased. Clear the rectangle ourselves, and change
-	 * to XDrawString.
-	 */
-	/*if( draw_string == XDrawImageString ||
-		draw_string == XDrawImageString16)*/
-	if (drawfunc == XFT_DRAW_IMAGE_STRING || drawfunc == X11_DRAW_IMAGE_STRING)
-	{
-	    XSetForeground( r->Xdisplay, gc, gcvalue.background);
-	    XSetFillStyle( r->Xdisplay, gc, FillSolid);
-	    XFillRectangle( r->Xdisplay, win, gc,
-		    x, y - font->ascent,
-		    Width2Pixel (len * 2),
-		    // Width2Pixel (cols),
-		    //escapement,
-		    font->ascent + font->descent);
-		    //charstruct.width, font->ascent + font->descent);
-
-	    /*if( draw_string == XDrawImageString )
-		draw_string = XDrawString;
-	    else draw_string = XDrawString16;*/
-	}
-
-//# ifdef TEXT_SHADOW
-	/*
-	 * Restrict output to the above bounding box.
-	 */
-	if (r->h->rs[Rs_textShadow] && SHADOW_NONE != r->TermWin.shadow_mode)
-	{
-		rxvt_set_clipping( r, NULL, gc, refreshRegion,
-				x, y - font->ascent,
-				//charstruct.width, font->ascent + font->descent,
-				//escapement,
-				Width2Pixel (len * 2),
-				font->ascent + font->descent,
-				&sx, &sy);
-
-		/*
-		 * Draw the shadow at the appropriate offset.
-		 */
-		XSetForeground (r->Xdisplay, gc, r->TermWin.shadow);
-		//draw_string (r->Xdisplay, win, gc, x+sx, y+sy, str, len);
-		XwcDrawString (r->Xdisplay, win, r->TermWin.fontset, gc, x+sx, y+sy, (wchar_t *) str, len);
-	}
-
-//#endif
-	/*
-	 * Restore old GC values.
-	 */
-	XChangeGC( r->Xdisplay, gc,
-		GCForeground | GCBackground | GCFillStyle,
-		&gcvalue);
-
-//# ifdef TEXT_SHADOW
-	/*
-	 * Unclip drawing for remaining drawing.
-	 */
-	rxvt_free_clipping (r, NULL, gc, refreshRegion);
-//#endif
-
-	XFreeFontInfo( NULL, font, 1);
-//# ifdef TEXT_SHADOW
-	break;
-//#endif	/* TEXT_SHADOW */
-    }
-#endif	/* TEXT_SHADOW */
-
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "output entire string: %X\n", *str));
-    //draw_string (r->Xdisplay, win, gc, x, y, str, len);
-    if (drawfunc == XFT_DRAW_IMAGE_STRING || drawfunc == X11_DRAW_IMAGE_STRING)
-	XwcDrawImageString (r->Xdisplay, win, r->TermWin.fontset, gc, x, y, (wchar_t *) str, len);
+    /*
+     * Get the bounding box of the rectangle we would draw, and clip to it.
+     */
+    if( draw_string == XDrawImageString || draw_string == XDrawString)
+        xtextextents = XTextExtents;
+    else if ( draw_string == XDrawImageString16 ||
+        draw_string == XDrawString16)
+        xtextextents = XTextExtents16;
     else
-	XwcDrawString (r->Xdisplay, win, r->TermWin.fontset, gc, x, y, (wchar_t *) str, len);
+    {
+        xtextextents = NULL; /* Suppress gcc warning */
+        assert(0); /* Shouldn't happen */
+    }
+
+    xtextextents( font, str, len,
+        &unused_dir, &ascent, &descent, &charstruct);
+
+    /*
+     * If we're using XDrawImageString, then when we draw the actual text,
+     * the shadow will be erased. Clear the rectangle ourselves, and change
+     * to XDrawString.
+     */
+    if( draw_string == XDrawImageString ||
+        draw_string == XDrawImageString16)
+    {
+        XSetForeground( r->Xdisplay, gc, gcvalue.background);
+        XSetFillStyle( r->Xdisplay, gc, FillSolid);
+        XFillRectangle( r->Xdisplay, win, gc,
+            x, y - font->ascent,
+            charstruct.width, font->ascent + font->descent);
+
+        if( draw_string == XDrawImageString )
+        draw_string = XDrawString;
+        else draw_string = XDrawString16;
+    }
+
+
+    /*
+     * Restrict output to the above bounding box.
+     */
+    rxvt_set_clipping( r, NULL, gc, refreshRegion,
+        x, y - font->ascent,
+        charstruct.width, font->ascent + font->descent,
+        &sx, &sy);
+
+    /*
+     * Draw the shadow at the appropriate offset.
+     */
+    XSetForeground (r->Xdisplay, gc, r->TermWin.shadow);
+    draw_string (r->Xdisplay, win, gc, x+sx, y+sy, str, len);
+
+    /*
+     * Restore old GC values.
+     */
+    XChangeGC( r->Xdisplay, gc,
+        GCForeground | GCBackground | GCFillStyle,
+        &gcvalue);
+
+    /*
+     * Unclip drawing for remaining drawing.
+     */
+    rxvt_free_clipping (r, NULL, gc, refreshRegion);
+
+    XFreeFontInfo( NULL, font, 1);
+    break;
+    }
+# endif /* TEXT_SHADOW */
+
+    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "output entire string: %s\n", str));
+    draw_string (r->Xdisplay, win, gc, x, y, str, len);
 }
 
 
-/* 
+/*
 ** Draw the string:
 **    x, y:  top left corner of the string
 **    str :  actual string to draw
@@ -3186,279 +3165,269 @@ rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
 **    fore, back: color index to r->pixColors array. It is only
 **           used by the XFT drawing, not X11 drawing
 **    rend:  rendition value (text attributes). Only used for the RS_acsFont
-**	     attribute with Xft for correct drawing of ACS graphics characters.
+**       attribute with Xft for correct drawing of ACS graphics characters.
 */
 /* INTPROTO */
 void
 rxvt_scr_draw_string (rxvt_t* r, int page,
-	int x, int y, text_t* str, int len, int cols, int drawfunc,
-	uint16_t fore, uint16_t back,
-	__attribute__((unused)) rend_t rend, Region refreshRegion)
+    int x, int y, char* str, int len, int drawfunc,
+    uint16_t fore, uint16_t back,
+    __attribute__((unused)) rend_t rend, Region refreshRegion)
 {
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "rxvt_scr_draw_string (r, page: %d, x: %d, y: %d, str, len: %d, cols: %d, ...)",
-		page, x, y, len, cols));
 #ifdef XFT_SUPPORT
-    int	    fillback = 0;
-    int fontid = ((rend & RS_fontID) >> 24);
-    //void    (*xftdraw_string) () = NULL;
+    int     fillback = 0;
+    int     adjust;
+    void    (*xftdraw_string) () = NULL;
 
     switch (drawfunc)
     {
-	//case	XFT_DRAW_IMAGE_STRING_8:
-	case	XFT_DRAW_IMAGE_STRING:
-	//case	XFT_DRAW_IMAGE_STRING_16:
-	    fillback = 1;
-	    break;
-    }
-    /*if (drawfunc == XFT_DRAW_IMAGE_STRING)
-	fillback = 1;*/
+    case    XFT_DRAW_IMAGE_STRING_8:
+        fillback = 1;
+    case    XFT_DRAW_STRING_8:
+        xftdraw_string = XftDrawString8; break;
 
-    if (ISSET_OPTION(r, Opt_xft) && PVTS(r, page)->xftvt)// && xftdraw_string)
+    case    XFT_DRAW_IMAGE_STRING_16:
+        fillback = 1;
+    case    XFT_DRAW_STRING_16:
+        xftdraw_string = XftDrawString16; break;
+    }
+
+    /*
+     * adjust is a variable that records whether each character of the string is
+     * 8 bits or 16 bits
+     */
+    adjust = (XftDrawString8 == xftdraw_string) ? 0 : 1;
+
+    if (ISSET_OPTION(r, Opt_xft) && PVTS(r, page)->xftvt && xftdraw_string)
     {
-	//register int	loop;	    /* loop iteration number */
-	//register int	loopitem;   /* each iteration increasing # */
-	//register int	i;
-	/*
-	** xft_draw_string_xft should call these two parameters
-	*/
-	//register text_t*	pstr;	    /* string to print */
-	//register int	plen;	    /* string length */
-	//text_t*		newstr;
-#if 0
+    register int    loop;       /* loop iteration number */
+    register int    loopitem;   /* each iteration increasing # */
+    register int    i;
+    /*
+    ** xft_draw_string_xft should call these two parameters
+    */
+    register char*  pstr;       /* string to print */
+    register int    plen;       /* string length */
+    char*       newstr;
 #ifdef MULTICHAR_SET
 #  ifdef HAVE_ICONV_H
-	text_t		pbuf[1024]; /* buffer to save UTF-8 string */
+    char        pbuf[1024]; /* buffer to save UTF-8 string */
 #  endif
 #endif
-#endif
-
-	/*
-	 * Xft does not support XDrawImageString, so we need to clear the
-	 * background of text by ourselves.
-	 */
-	if (fillback)
-	{
-	    /*if (len == 1)
-	    { // To deal with cursor upon a single character.
-		XGlyphInfo extents;
-		int width_to_draw;
-    
-		XftTextExtents32 (r->Xdisplay, r->TermWin.xftfont[fontid], (XftChar32*) str, len, &extents); // TODO
-		if (extents.xOff <= Width2Pixel (1))
-		    width_to_draw = Width2Pixel (1);
-		else
-		    width_to_draw = Width2Pixel (2);
-
-		XftDrawRect (PVTS(r, page)->xftvt, &(r->xftColors[back]),
-			x, y,
-			//extents.xOff, 
-			width_to_draw,
-			//Width2Pixel(1),
-			Height2Pixel(1));
-	    }
-	    else*/
-		XftDrawRect (PVTS(r, page)->xftvt, &(r->xftColors[back]),
-			x, y,
-			//extents.xOff, 
-			//Width2Pixel(len * 2),
-			Width2Pixel(cols),
-			Height2Pixel(1));
-	    //extents.yOff);
-
-		    // Width2Pixel(len * 2), Height2Pixel(1));
-		    //extents.width, Height2Pixel(1)); //extents.height);
-		    //Width2Pixel(len * (1 + adjust)), Height2Pixel(1));
-		    //Width2Pixel(len), Height2Pixel(1));
-	    // TODO: Nothing to free here?
-	    // TODO: extents.xOff?
-	}
-
-	/* We use TermWin.xftfont->ascent here */
-	y += r->TermWin.xftfont[fontid]->ascent; // TODO
-
-	/*
-	** If the font is monospace, we print the entire string once,
-	** otherwise, print the characters one by one
-	*/
-#if 0
-	if (r->TermWin.xftmono)
-	{
-	    /* print string once for mono font */
-	    loop = 1;
-	    loopitem = len;
-	    /*
-	    ** If XftDrawString8 == xftdraw_string
-	    **     string length == character number
-	    ** If XftDrawString16 == xftdraw_string
-	    **     string length == 2 * character number, but we do
-	    ** not need to multiply loopitem by 2 because  the
-	    ** XftDrawString16 takes character numbers.
-	    **
-	    ** If XftDrawStringUtf8 == xftdraw_string
-	    **     string length == 2 * character number, but we need
-	    ** to multiply loopitem by 2 because iconv need string
-	    ** length as parameter, not character number.
-	    */
-	    //if (XftDrawStringUtf8 == xftdraw_string)
-	//	loopitem <<= 1;
-	    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire mono string\n"));
-	}
-	/*
-	** Non monospace font, but still we can improve the performance
-	** by print it once under certain conditions
-	*/
-# ifdef MULTICHAR_SET
-	else
-	if (
-	      NOTSET_OPTION(r, Opt2_xftSlowOutput)
-	      && (XftDrawStringUtf8 == xftdraw_string)
-	      && (
-		  r->TermWin.xftmfont->max_advance_width ==
-		  	(r->TermWin.fwidth << 1)
-		 )
-	   )
-	{
-	    /* print string once for multichar string */
-	    loop = 1;
-	    /*
-	    ** If XftDrawStringUtf8 == xftdraw_string
-	    **     string length == 2 * character number, but we need
-	    ** to multiply loopitem by 2 because iconv need string
-	    ** length as parameter, not character number.
-	    */
-	    loopitem = (len << 1);
-	    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire UTF-8 string\n"));
-	}
-	else
-	if (
-	      NOTSET_OPTION(r, Opt2_xftSlowOutput)
-	      && (XftDrawString16 == xftdraw_string)
-	      && (
-		  r->TermWin.xftmfont->max_advance_width ==
-		  	(r->TermWin.fwidth << 1)
-		 )
-	   )
-	{
-	    /* print string once for 16-bits string */
-	    loop = 1;
-	    loopitem = len;
-	    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire 16-bits string\n"));
-	}
-# endif	/* MULTICHAR_SET */
-	else
-	if (
-	      r->TermWin.xftfnmono && (XftDrawString8 == xftdraw_string)
-	      && (r->TermWin.xftfont->max_advance_width == r->TermWin.fwidth)
-	   )
-	{
-	    /* print string once for 8-bits string */
-	    loop = 1;
-	    loopitem = len;
-	    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire 8-bits string\n"));
-	}
-	else
-	{
-	    /* print string one by one character */
-	    loop = len;
-	    loopitem = 1; //+ adjust;
-	    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output characters one by one\n"));
-	}
-#endif
 
 
-	//newstr = str;	/* string beginning in each iteration */
-	//for (i = 0; i < loop; i ++)
-	//{
-#if 0
+    /*
+     * Xft does not support XDrawImageString, so we need to clear the
+     * background of text by ourselves.
+     */
+    if (fillback)
+        XftDrawRect( PVTS(r, page)->xftvt, &(r->xftColors[back]),
+            x, y, Width2Pixel(len * (1 + adjust)), Height2Pixel(1));
+
+    /* We use TermWin.xftfont->ascent here */
+    y += r->TermWin.xftfont->ascent;
+
+    /*
+     * Xft does not support XftDrawString16, so we need to convert the
+     * string to UTF-8. Here we reencode the string before conversion
+     */
 # ifdef MULTICHAR_SET
 #  ifdef HAVE_ICONV_H
-	    if (XftDrawStringUtf8 == xftdraw_string)
-	    {
-		/* We should convert the string to UTF-8 */
-		text_t*	buf = pbuf;		/* always init it */
-		int	buflen = sizeof(pbuf)-1;/* always init it */
-		int	newlen = loopitem;	/* always init it */
-		text_t*	oldstr = newstr;
-		iconv (r->TermWin.xfticonv, (char**)(&newstr),
-		    (size_t*) &newlen, &buf, (size_t*) &buflen);
-		*buf = (text_t) 0;    /* set end of string */
-		pstr = pbuf;
-		/*
-		 * we should use the length of original string, not UTF-8 string
-		 * here!!!
-		 */
-		plen = loopitem;
-		/*
-		 * reset newstr to old position, we will increase it later
-		 */
-		newstr = oldstr;
-	    }
-	    else
+    if (adjust && (iconv_t) -1 != r->TermWin.xfticonv)
+    {
+        register int    j, newlen = (len << 1);
+        switch (r->encoding_method)
+        {
+        case ENC_EUCJ:
+        case ENC_GB:
+            for (j = 0; j < newlen; j ++)
+            str[j] |= 0x80;
+            break;
+        case ENC_GBK:   /* need to do nothing */
+        case ENC_BIG5:  /* need to do nothing */
+        default:
+            break;
+        }
+        /* we will use utf8 routine to draw string */
+        xftdraw_string = XftDrawStringUtf8;
+    }
 #  endif
-# endif	/* MULTICHAR_SET */
-#endif
-#if 0
-	    {
-		/* We do not need to convert the string to UTF-8 */
-		pstr = str; //newstr;
-		plen = loopitem;
-	    }
-#endif
+# endif /* MULTICHAR_SET */
 
-	    rxvt_draw_string_xft (r, PVTS( r, page)->vt, r->TermWin.gc,
-		    refreshRegion, rend, NO_PFONT,
-		    PVTS(r, page)->xftvt, &(r->xftColors[fore]),
-		    x, y, str, len); //pstr, plen);
 
-	    //x += Width2Pixel (loopitem);
-	    //newstr += loopitem;	/* next string to display */
-	//}
+    /*
+    ** If the font is monospace, we print the entire string once,
+    ** otherwise, print the characters one by one
+    */
+    if (r->TermWin.xftmono)
+    {
+        /* print string once for mono font */
+        loop = 1;
+        loopitem = len;
+        /*
+        ** If XftDrawString8 == xftdraw_string
+        **     string length == character number
+        ** If XftDrawString16 == xftdraw_string
+        **     string length == 2 * character number, but we do
+        ** not need to multiply loopitem by 2 because  the
+        ** XftDrawString16 takes character numbers.
+        **
+        ** If XftDrawStringUtf8 == xftdraw_string
+        **     string length == 2 * character number, but we need
+        ** to multiply loopitem by 2 because iconv need string
+        ** length as parameter, not character number.
+        */
+        if (XftDrawStringUtf8 == xftdraw_string)
+        loopitem <<= 1;
+        rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire mono string\n"));
+    }
+    /*
+    ** Non monospace font, but still we can improve the performance
+    ** by print it once under certain conditions
+    */
+# ifdef MULTICHAR_SET
+    else
+    if (
+          NOTSET_OPTION(r, Opt2_xftSlowOutput)
+          && (XftDrawStringUtf8 == xftdraw_string)
+          && (
+          r->TermWin.xftmfont->max_advance_width ==
+            (r->TermWin.fwidth << 1)
+         )
+       )
+    {
+        /* print string once for multichar string */
+        loop = 1;
+        /*
+        ** If XftDrawStringUtf8 == xftdraw_string
+        **     string length == 2 * character number, but we need
+        ** to multiply loopitem by 2 because iconv need string
+        ** length as parameter, not character number.
+        */
+        loopitem = (len << 1);
+        rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire UTF-8 string\n"));
     }
     else
-#endif	/* XFT_SUPPORT */
+    if (
+          NOTSET_OPTION(r, Opt2_xftSlowOutput)
+          && (XftDrawString16 == xftdraw_string)
+          && (
+          r->TermWin.xftmfont->max_advance_width ==
+            (r->TermWin.fwidth << 1)
+         )
+       )
     {
-	//int	(*draw_string) ();
-#if 0
-	switch (drawfunc)
-	{
-	    case    X11_DRAW_STRING_8:
-		draw_string = XDrawString; break;
-	    case    X11_DRAW_STRING_16:
-		draw_string = XDrawString16; break;
-	    case    X11_DRAW_IMAGE_STRING_8:
-		draw_string = XDrawImageString; break;
-	    case    X11_DRAW_IMAGE_STRING_16:
-		draw_string = XDrawImageString16; break;
+        /* print string once for 16-bits string */
+        loop = 1;
+        loopitem = len;
+        rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire 16-bits string\n"));
+    }
+# endif /* MULTICHAR_SET */
+    else
+    if (
+          r->TermWin.xftfnmono && (XftDrawString8 == xftdraw_string)
+          && (r->TermWin.xftfont->max_advance_width == r->TermWin.fwidth)
+       )
+    {
+        /* print string once for 8-bits string */
+        loop = 1;
+        loopitem = len;
+        rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output entire 8-bits string\n"));
+    }
+    else
+    {
+        /* print string one by one character */
+        loop = len;
+        loopitem = 1 + adjust;
+        rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "output characters one by one\n"));
+    }
 
-	    case    XFT_DRAW_STRING_8:	    /* fall back to X11 */
-		draw_string = XDrawString; break;
-	    case    XFT_DRAW_STRING_16:	    /* fall back to X11 */
-	    case    XFT_DRAW_STRING_32:	    /* fall back to X11 */
-	    case    XFT_DRAW_STRING_UTF8:   /* fall back to X11 */
-		draw_string = XDrawString16; break;
 
-	    case    XFT_DRAW_IMAGE_STRING_8:	/* fall back to X11 */
-		draw_string = XDrawImageString; break;
-	    case    XFT_DRAW_IMAGE_STRING_16:	/* fall back to X11 */
-	    case    XFT_DRAW_IMAGE_STRING_32:	/* fall back to X11 */
-	    case    XFT_DRAW_IMAGE_STRING_UTF8:	/* fall back to X11 */
-		draw_string = XDrawImageString16; break;
+    newstr = str;   /* string beginning in each iteration */
+    for (i = 0; i < loop; i ++)
+    {
+# ifdef MULTICHAR_SET
+#  ifdef HAVE_ICONV_H
+        if (XftDrawStringUtf8 == xftdraw_string)
+        {
+        /* We should convert the string to UTF-8 */
+        char*   buf = pbuf;     /* always init it */
+        size_t  buflen = sizeof(pbuf)-1;/* always init it */
+        size_t  newlen = loopitem;  /* always init it */
+        char*   oldstr = newstr;
+        iconv (r->TermWin.xfticonv, &newstr, &newlen, &buf, &buflen);
+        *buf = (char) 0;    /* set end of string */
+        pstr = pbuf;
+        /*
+         * we should use the length of original string, not UTF-8 string
+         * here!!!
+         */
+        plen = loopitem;
+        /*
+         * reset newstr to old position, we will increase it later
+         */
+        newstr = oldstr;
+        }
+        else
+#  endif
+# endif /* MULTICHAR_SET */
+        {
+        /* We do not need to convert the string to UTF-8 */
+        pstr = newstr;
+        plen = loopitem;
+        }
 
-	    default:
-		draw_string = NULL; break;
-	}
-#endif
+        rxvt_draw_string_xft(r, PVTS( r, page)->vt, r->TermWin.gc,
+            refreshRegion, rend, NO_PFONT,
+            PVTS(r, page)->xftvt, &(r->xftColors[fore]),
+            x, y, pstr, plen, xftdraw_string);
 
-	/* We use TermWin.font->ascent here */
-	y += r->TermWin.font->ascent;
+        x += Width2Pixel (loopitem);
+        newstr += loopitem; /* next string to display */
+    }
+    }
+    else
+#endif  /* XFT_SUPPORT */
+    {
+    int (*draw_string) ();
+    switch (drawfunc)
+    {
+        case    X11_DRAW_STRING_8:
+        draw_string = XDrawString; break;
+        case    X11_DRAW_STRING_16:
+        draw_string = XDrawString16; break;
+        case    X11_DRAW_IMAGE_STRING_8:
+        draw_string = XDrawImageString; break;
+        case    X11_DRAW_IMAGE_STRING_16:
+        draw_string = XDrawImageString16; break;
 
-	/* Now draw the string */
-	//if (draw_string)
-	    rxvt_draw_string_x11 (r, PVTS(r, page)->vt, r->TermWin.gc,
-		    refreshRegion, x, y, str, len, drawfunc); //draw_string);
+        case    XFT_DRAW_STRING_8:      /* fall back to X11 */
+        draw_string = XDrawString; break;
+        case    XFT_DRAW_STRING_16:     /* fall back to X11 */
+        case    XFT_DRAW_STRING_32:     /* fall back to X11 */
+        case    XFT_DRAW_STRING_UTF8:   /* fall back to X11 */
+        draw_string = XDrawString16; break;
+
+        case    XFT_DRAW_IMAGE_STRING_8:    /* fall back to X11 */
+        draw_string = XDrawImageString; break;
+        case    XFT_DRAW_IMAGE_STRING_16:   /* fall back to X11 */
+        case    XFT_DRAW_IMAGE_STRING_32:   /* fall back to X11 */
+        case    XFT_DRAW_IMAGE_STRING_UTF8: /* fall back to X11 */
+        draw_string = XDrawImageString16; break;
+
+        default:
+        draw_string = NULL; break;
+    }
+
+    /* We use TermWin.font->ascent here */
+    y += r->TermWin.font->ascent;
+
+    /* Now draw the string */
+    if (draw_string)
+        rxvt_draw_string_x11 (r, PVTS(r, page)->vt, r->TermWin.gc,
+            refreshRegion, x, y, str, len, draw_string);
     }
 }
-
 
 /*
  * 2006-08-19 gi1242: Don't display blinking text with the bold attribute. This
@@ -3567,18 +3536,18 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 #ifdef XFT_SUPPORT
     if (ISSET_OPTION(r, Opt_xft) && PVTS(r, page)->xftvt)
     {
-	//drawfunc = XFT_DRAW_STRING_8;
-	drawfunc = XFT_DRAW_STRING;
-	//image_drawfunc = XFT_DRAW_IMAGE_STRING_8;
-	image_drawfunc = XFT_DRAW_IMAGE_STRING;
+	drawfunc = XFT_DRAW_STRING_8;
+	// drawfunc = XFT_DRAW_STRING;
+	image_drawfunc = XFT_DRAW_IMAGE_STRING_8;
+	// image_drawfunc = XFT_DRAW_IMAGE_STRING;
     }
     else
 #endif
     {
-	//drawfunc = X11_DRAW_STRING_8;
-	drawfunc = X11_DRAW_STRING;
-	//image_drawfunc = X11_DRAW_IMAGE_STRING_8;
-	image_drawfunc = X11_DRAW_IMAGE_STRING;
+	drawfunc = X11_DRAW_STRING_8;
+	// drawfunc = X11_DRAW_STRING;
+	image_drawfunc = X11_DRAW_IMAGE_STRING_8;
+	// image_drawfunc = X11_DRAW_IMAGE_STRING;
     }
 
     clearfirst = clearlast = must_clear = wbyte = 0;
@@ -4270,7 +4239,7 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 		    else*/
 		    cols -= i;
 
-		    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "\tDrawing %d (%d extra chars) chars.\n", len, echars-i)); 
+		    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "\tDrawing %d (%d extra chars) chars.\n", len, echars-i));
 		    //, (len > 55) ? 55 : len, buffer));
 		} /* if (!fprop) */
 		else if (col < r->TermWin.ncol - 1 && stp[col + 1] == 0)
@@ -4599,7 +4568,7 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 			rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "CL Drawing '%.60s' (%d)\n", buffer, len));
 
 			rxvt_scr_draw_string (r, page, xpixel, ypixelc,
-				buffer, len, cols, drawfunc,
+				buffer, len, drawfunc,
 				fore, back, rend,
 				((refresh_type & CLIPPED_REFRESH) ?
 					r->h->refreshRegion : None ));
@@ -4624,7 +4593,7 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 
 		rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "PF Drawing '%.60s' (%d)\n", buffer, len));
 		rxvt_scr_draw_string (r, page,
-			xpixel, ypixelc, buffer, len, cols, drawfunc,
+			xpixel, ypixelc, buffer, len, drawfunc,
 			fore, back, rend,
 			((refresh_type & CLIPPED_REFRESH) ?
 				r->h->refreshRegion : None ));
@@ -4633,7 +4602,7 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 	    {
 		rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "NC Drawing '%.60s' (%d)\n", buffer, len));
 		rxvt_scr_draw_string (r, page,
-			xpixel, ypixelc, buffer, len, cols, image_drawfunc, //XFT_DRAW_IMAGE_STRING_8, //image_drawfunc,
+			xpixel, ypixelc, buffer, len, XFT_DRAW_IMAGE_STRING_8, //image_drawfunc,
 			fore, back, rend,
 			((refresh_type & CLIPPED_REFRESH) ?
 				r->h->refreshRegion : None ));
@@ -4651,7 +4620,7 @@ rxvt_scr_refresh (rxvt_t* r, int page, unsigned char refresh_type)
 		 */
 		rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "Overstriking %s\n", buffer ));
 		rxvt_scr_draw_string (r, page,
-			xpixel + 1, ypixelc, buffer, len, cols, drawfunc,
+			xpixel + 1, ypixelc, buffer, len, drawfunc,
 			fore, back, rend,
 			((refresh_type & CLIPPED_REFRESH) ?
 				r->h->refreshRegion : None ));

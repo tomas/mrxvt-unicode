@@ -222,12 +222,13 @@ int              rxvt_control_tty                 __PROTO((int fd_tty, const cha
 /* Begin prototypes of screen.c */
 void
 rxvt_draw_string_x11 (rxvt_t* r, Window win, GC gc, Region refreshRegion,
-	int x, int y, char* str, int len, int drawfunc); //(*draw_string)());
+  int x, int y, char* str, int len, int (*draw_string)());
 #ifdef XFT_SUPPORT
 void
 rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
-	rend_t rend, int pfont,
-	XftDraw* win, XftColor* fore, int x, int y, text_t* str, int len);
+  rend_t rend, int pfont,
+  XftDraw* win, XftColor* fore, int x, int y, char* str, int len,
+  void (*xftdraw_string)());
 #endif
 void             rxvt_init_screen                 __PROTO((rxvt_t* r));
 void             rxvt_scr_reset                   __PROTO((rxvt_t* r, int page));
