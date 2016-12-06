@@ -579,74 +579,72 @@ rxvt_scr_adjust_col (rxvt_t* r, int page, unsigned int total_rows)
     unsigned int    nrow, ncol, prev_ncol;
     unsigned int    p;
 
-
     nrow = r->TermWin.nrow;
     ncol = r->TermWin.ncol;
     prev_ncol = PVTS(r, page)->prev_ncol;
 
-    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "%s( r, page=%d, total_rows=%u ):" "ncol=%d, prev_ncol=%d, nrow=%d\n", __func__, page, total_rows, ncol, prev_ncol, nrow ));
+    rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "%s( r, page=%d, total_rows=%u ):" "ncol=%d, prev_ncol=%d, nrow=%d\n", __func__, page, total_rows, ncol, prev_ncol, nrow ));
 
-
-    for (p = 0; p < total_rows; p++)
-    {
-	if (PSCR(r, page).text[p])
-	{
-	    PSCR(r, page).text[p] = rxvt_realloc (
-		PSCR(r, page).text[p], ncol * sizeof(text_t));
-	    PSCR(r, page).rend[p] = rxvt_realloc (
-		PSCR(r, page).rend[p], ncol * sizeof(rend_t));
-	    MIN_IT(PSCR(r, page).tlen[p], (int16_t)ncol);
-	    if (ncol > prev_ncol)
-		rxvt_blank_line (
-		    &(PSCR(r, page).text[p][prev_ncol]),
-		    &(PSCR(r, page).rend[p][prev_ncol]),
-		    ncol - prev_ncol, DEFAULT_RSTYLE);
-	}
+    for (p = 0; p < total_rows; p++) {
+    	if (PSCR(r, page).text[p]) {
+    	    PSCR(r, page).text[p] = rxvt_realloc (
+    		PSCR(r, page).text[p], ncol * sizeof(text_t));
+    	    PSCR(r, page).rend[p] = rxvt_realloc (
+    		PSCR(r, page).rend[p], ncol * sizeof(rend_t));
+    	    MIN_IT(PSCR(r, page).tlen[p], (int16_t)ncol);
+    	    if (ncol > prev_ncol) {
+                rxvt_blank_line (
+                    &(PSCR(r, page).text[p][prev_ncol]),
+                    &(PSCR(r, page).rend[p][prev_ncol]),
+                    ncol - prev_ncol, DEFAULT_RSTYLE);
+            }
+	   }
     }
 
-    for (p = 0; p < nrow; p++)
-    {
-	PVTS(r, page)->drawn_text[p] = rxvt_realloc (
-	    PVTS(r, page)->drawn_text[p], ncol * sizeof(text_t));
-	PVTS(r, page)->drawn_rend[p] = rxvt_realloc (
-	    PVTS(r, page)->drawn_rend[p], ncol * sizeof(rend_t));
+    for (p = 0; p < nrow; p++) {
+    	PVTS(r, page)->drawn_text[p] = rxvt_realloc (
+    	    PVTS(r, page)->drawn_text[p], ncol * sizeof(text_t));
+    	PVTS(r, page)->drawn_rend[p] = rxvt_realloc (
+    	    PVTS(r, page)->drawn_rend[p], ncol * sizeof(rend_t));
 #if NSCREENS
-	if (PVTS(r, page)->swap.text[p])
-	{
-	    PVTS(r, page)->swap.text[p] = rxvt_realloc (
-		PVTS(r, page)->swap.text[p], ncol * sizeof(text_t));
-	    PVTS(r, page)->swap.rend[p] = rxvt_realloc (
-		PVTS(r, page)->swap.rend[p], ncol * sizeof(rend_t));
-	    MIN_IT(PVTS(r, page)->swap.tlen[p], (int16_t)ncol);
-	    if (ncol > prev_ncol)
-		rxvt_blank_line(
-		    &(PVTS(r, page)->swap.text[p][prev_ncol]),
-		    &(PVTS(r, page)->swap.rend[p][prev_ncol]),
-		    ncol - prev_ncol, DEFAULT_RSTYLE);
-	}
+    	if (PVTS(r, page)->swap.text[p]) {
+    	    PVTS(r, page)->swap.text[p] = rxvt_realloc (
+    		PVTS(r, page)->swap.text[p], ncol * sizeof(text_t));
+    	    PVTS(r, page)->swap.rend[p] = rxvt_realloc (
+    		PVTS(r, page)->swap.rend[p], ncol * sizeof(rend_t));
+    	    MIN_IT(PVTS(r, page)->swap.tlen[p], (int16_t)ncol);
+/* seems unnecessary
+    	    if (ncol > prev_ncol) {
+                rxvt_blank_line(
+                    &(PVTS(r, page)->swap.text[p][prev_ncol]),
+                    &(PVTS(r, page)->swap.rend[p][prev_ncol]),
+                    ncol - prev_ncol, DEFAULT_RSTYLE);
+            }
+*/
+    	}
 #endif
-	if (ncol > prev_ncol)
-	    rxvt_blank_line(
-		&(PVTS(r, page)->drawn_text[p][prev_ncol]),
-		&(PVTS(r, page)->drawn_rend[p][prev_ncol]),
-		ncol - prev_ncol, DEFAULT_RSTYLE);
+    	if (ncol > prev_ncol) {
+            rxvt_blank_line(
+                &(PVTS(r, page)->drawn_text[p][prev_ncol]),
+                &(PVTS(r, page)->drawn_rend[p][prev_ncol]),
+                ncol - prev_ncol, DEFAULT_RSTYLE);
+        }
     }
+
     MIN_IT(PSCR(r, page).cur.col, (int16_t)ncol - 1);
 #if NSCREENS
     MIN_IT(PVTS(r, page)->swap.cur.col, (int16_t)ncol - 1);
 #endif
 
-
     /*
     ** Only reset tabstop if expanding columns, save realloc in
     ** shrinking columns
     */
-    if (r->tabstop && ncol > prev_ncol)
-    {
-	rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "expand r->tabstop to %d\n", ncol));
-	r->tabstop = rxvt_realloc(r->tabstop, ncol * sizeof(char));
-	for (p = prev_ncol; p < ncol; p++)
-	    r->tabstop[p] = (p % TABSTOP_SIZE == 0) ? 1 : 0;
+    if (r->tabstop && ncol > prev_ncol) {
+    	rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "expand r->tabstop to %d\n", ncol));
+    	r->tabstop = rxvt_realloc(r->tabstop, ncol * sizeof(char));
+    	for (p = prev_ncol; p < ncol; p++)
+    	    r->tabstop[p] = (p % TABSTOP_SIZE == 0) ? 1 : 0;
     }
 }
 
@@ -672,11 +670,11 @@ rxvt_scr_reset(rxvt_t* r, int page)
 	r->TermWin.ncol = 80;
     if (r->TermWin.nrow == 0)
 	r->TermWin.nrow = 24;
+
     ncol = r->TermWin.ncol;
     nrow = r->TermWin.nrow;
-    if (PVTS(r, page)->init_screen &&
-	ncol == prev_ncol && nrow == prev_nrow)
-	return;
+    if (PVTS(r, page)->init_screen && ncol == prev_ncol && nrow == prev_nrow)
+	   return;
 
     rxvt_dbgmsg ((DBG_VERBOSE, DBG_SCREEN, "rxvt_scr_reset %d () refresh screen\n", page));
     PVTS(r, page)->want_refresh = 1;
@@ -687,27 +685,20 @@ rxvt_scr_reset(rxvt_t* r, int page)
     PSCR(r, page).tscroll = 0;
     PSCR(r, page).bscroll = nrow - 1;
 
-    if (PVTS(r, page)->init_screen == 0)
-    {
-	/* Initialize the screen structures */
-	rxvt_scr_alloc (r, page);
-    }
-    else
-    {
-	/* B1: resize rows */
-	if (nrow < prev_nrow)
-	{
-	    rxvt_scr_delete_row (r, page);
-	}
-	else if (nrow > prev_nrow)
-	{
-	    rxvt_scr_add_row (r, page, total_rows, prev_total_rows);
-	}
-	/* B2: resize columns */
-	if (ncol != prev_ncol)
-	{
-	    rxvt_scr_adjust_col (r, page, total_rows);
-	}
+    if (PVTS(r, page)->init_screen == 0) {
+    	/* Initialize the screen structures */
+    	rxvt_scr_alloc (r, page);
+    } else {
+    	/* B1: resize rows */
+    	if (nrow < prev_nrow) {
+    	    rxvt_scr_delete_row (r, page);
+    	} else if (nrow > prev_nrow) {
+    	    rxvt_scr_add_row (r, page, total_rows, prev_total_rows);
+    	}
+    	/* B2: resize columns */
+    	if (ncol != prev_ncol) {
+    	    rxvt_scr_adjust_col (r, page, total_rows);
+    	}
     }
 
     PVTS(r, page)->prev_nrow = nrow;
@@ -1159,8 +1150,7 @@ rxvt_scr_add_lines (rxvt_t* r, int page, text_t* str, int nlines, int len)
     last_col = r->TermWin.ncol;
 
     ZERO_SCROLLBACK(r, page);
-    if (nlines > 0)
-    {
+    if (nlines > 0) {
 	/*
 	 * 2006-09-02 gi1242 TODO: The code below is *horrible*. When we call
 	 * rxvt_scroll_text(), we might end up with a negative CURROW. We try
@@ -1168,12 +1158,10 @@ rxvt_scr_add_lines (rxvt_t* r, int page, text_t* str, int nlines, int len)
 	 * reset this information!
 	 */
 	nlines += (CURROW - PSCR(r, page).bscroll);
-	if (
-	      (nlines > 0)
-	      && (PSCR(r, page).tscroll == 0)
-	      && (PSCR(r, page).bscroll == (r->TermWin.nrow - 1))
-	   )
-	{
+	if ((nlines > 0)
+	     && (PSCR(r, page).tscroll == 0)
+	     && (PSCR(r, page).bscroll == (r->TermWin.nrow - 1))) {
+
 	    /* _at least_ this many lines need to be scrolled */
 	    rxvt_scroll_text(r, page, PSCR(r, page).tscroll,
 		PSCR(r, page).bscroll, nlines, 0);
@@ -1226,52 +1214,49 @@ rxvt_scr_add_lines (rxvt_t* r, int page, text_t* str, int nlines, int len)
 #endif
 #endif
 
-    for (i = 0; i < len;)
-    {
+    for (i = 0; i < len;) {
 	c = str[i++];
 
 #ifdef XFT_SUPPORT
 	XftFont* font;
-
 	XGlyphInfo  extents;
 #endif
 
-	switch (c)
-	{
+	switch (c) {
 	    case '\t':
-		rxvt_scr_tab(r, page, 1);
-		continue;
+    		rxvt_scr_tab(r, page, 1);
+    		continue;
 
 	    case '\n':
-		/* XXX: think about this */
-		if( PSCR(r, page).tlen[row] != -1 )
-		    MAX_IT(PSCR(r, page).tlen[row], CURCOL);
+    		/* XXX: think about this */
+    		if( PSCR(r, page).tlen[row] != -1 )
+    		    MAX_IT(PSCR(r, page).tlen[row], CURCOL);
 
-		PSCR(r, page).flags &= ~Screen_WrapNext;
-		if (CURROW == PSCR(r, page).bscroll)
-		{
-		    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "%s:%d ",
-				__FILE__, __LINE__ ));
-		    rxvt_scroll_text(r, page, PSCR(r, page).tscroll,
-			    PSCR(r, page).bscroll, 1, 0);
-		    adjust_view_start( r, page, 1 );
-		}
-		else if (CURROW < (r->TermWin.nrow - 1))
-		    row = (++CURROW) + SVLINES;
+    		PSCR(r, page).flags &= ~Screen_WrapNext;
+    		if (CURROW == PSCR(r, page).bscroll)
+    		{
+    		    rxvt_dbgmsg ((DBG_DEBUG, DBG_SCREEN, "%s:%d ",
+    				__FILE__, __LINE__ ));
+    		    rxvt_scroll_text(r, page, PSCR(r, page).tscroll,
+    			    PSCR(r, page).bscroll, 1, 0);
+    		    adjust_view_start( r, page, 1 );
+    		}
+    		else if (CURROW < (r->TermWin.nrow - 1))
+    		    row = (++CURROW) + SVLINES;
 
-		stp = PSCR(r, page).text[row];  /* _must_ refresh */
-		srp = PSCR(r, page).rend[row];  /* _must_ refresh */
-		RESET_CHSTAT(r, page);
-		continue;
+    		stp = PSCR(r, page).text[row];  /* _must_ refresh */
+    		srp = PSCR(r, page).rend[row];  /* _must_ refresh */
+    		RESET_CHSTAT(r, page);
+    		continue;
 
 	    case '\r':
-		/* XXX: think about this */
-		if (PSCR(r, page).tlen[row] != -1)
-		    MAX_IT(PSCR(r, page).tlen[row], CURCOL);
-		PSCR(r, page).flags &= ~Screen_WrapNext;
-		CURCOL = 0;
-		RESET_CHSTAT(r, page);
-		continue;
+    		/* XXX: think about this */
+    		if (PSCR(r, page).tlen[row] != -1)
+    		    MAX_IT(PSCR(r, page).tlen[row], CURCOL);
+    		PSCR(r, page).flags &= ~Screen_WrapNext;
+    		CURCOL = 0;
+    		RESET_CHSTAT(r, page);
+    		continue;
 
 	    default:
 #if 0
@@ -2966,20 +2951,6 @@ rxvt_fill_rectangle (rxvt_t* r, int page, int x, int y, unsigned int w, unsigned
  */
 
 
-#if 0
-#define X11_DRAW_STRING_8	    (1)
-#define X11_DRAW_STRING_16	    (2)
-#define X11_DRAW_IMAGE_STRING_8	    (3)
-#define X11_DRAW_IMAGE_STRING_16    (4)
-#define XFT_DRAW_STRING_8	    (5)
-#define XFT_DRAW_STRING_16	    (6)
-#define XFT_DRAW_STRING_32	    (7)
-#define XFT_DRAW_STRING_UTF8	    (8)
-#define XFT_DRAW_IMAGE_STRING_8	    (9)
-#define XFT_DRAW_IMAGE_STRING_16    (10)
-#define XFT_DRAW_IMAGE_STRING_32    (11)
-#define XFT_DRAW_IMAGE_STRING_UTF8  (12)
-#endif
 #define X11_DRAW_STRING		    (1)
 #define X11_DRAW_IMAGE_STRING	    (3)
 #define XFT_DRAW_STRING		    (5)
