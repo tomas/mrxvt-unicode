@@ -219,12 +219,24 @@ void rxvt_free_clipping		  (rxvt_t*, __attribute__((unused)) void*, GC, Region);
 void
 rxvt_blank_line(text_t *et, rend_t *er, unsigned int width, rend_t efs)
 {
-    //MEMSET(et, ' ', (size_t)width);
+
+/*
+    MEMSET(et, ' ', (size_t)width);
     efs &= ~RS_baseattrMask;
     for (; width--;)
-    {
+    *er++ = efs;
+*/
+
+    if ((int)width < 0) {
+        // printf("wtf!\n");
+        return;
+    }
+
+    efs &= ~RS_baseattrMask;
+    for (; width--;) {
     	*et++ = ' ';
-	*er++ = efs;
+        // printf(" -- %d", width);
+	    *er++ = efs;
     }
 }
 
@@ -253,12 +265,22 @@ rxvt_blank_screen_mem(rxvt_t* r, int page, text_t **tp, rend_t **rp,
 	tp[row] = rxvt_malloc (sizeof(text_t) * width);
 	rp[row] = rxvt_malloc (sizeof(rend_t) * width);
     }
-    for (col = 0; col < width; col++)
-	tp[row][col] = ' ';
-    //MEMSET(tp[row], 0, sizeof (text_t) * width);//' ', width);
+
+/*
+    MEMSET(tp[row], ' ', width);
     efs &= ~RS_baseattrMask;
     for (er = rp[row]; width--;)
-	*er++ = efs;
+    *er++ = efs;
+*/
+
+    for (col = 0; col < width; col++)
+        tp[row][col] = ' ';
+
+    efs &= ~RS_baseattrMask;
+
+    for (er = rp[row]; width--;)
+        *er++ = efs;
+
 }
 
 
@@ -1163,6 +1185,10 @@ rxvt_scr_add_lines (rxvt_t* r, int page, text_t* str, int nlines, int len)
 	}
     }
 
+    // TODO: figure out why this happens
+    if (CURCOL > last_col) {
+        CURCOL = 0;
+    }
     assert(CURCOL < last_col + 1);
     assert(CURROW < r->TermWin.nrow);
 
@@ -1776,6 +1802,7 @@ rxvt_scr_erase_line(rxvt_t* r, int page, int mode)
 	    return;
     }
 
+    if ((int)num == -1) return;
     if (PSCR(r, page).text[row])
 	rxvt_blank_line(&(PSCR(r, page).text[row][col]),
 	    &(PSCR(r, page).rend[row][col]), num, PVTS(r, page)->rstyle);
