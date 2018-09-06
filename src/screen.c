@@ -3271,7 +3271,7 @@ rxvt_draw_string_xft (rxvt_t* r, Drawable d, GC gc, Region refreshRegion,
     }
 #ifdef MULTICHAR_SET
     else if( xftdraw_string == XftDrawStringUtf8 )
-    font = r->TermWin->xftmfont;
+    font = r->TermWin.xftmfont;
 #endif
     else font = *r->TermWin.xftfont;
 
@@ -3572,7 +3572,7 @@ rxvt_scr_draw_string (rxvt_t* r, int page,
           NOTSET_OPTION(r, Opt2_xftSlowOutput)
           && (XftDrawStringUtf8 == xftdraw_string)
           && (
-          r->TermWin->xftmfont->max_advance_width ==
+          r->TermWin.xftmfont->max_advance_width ==
             (r->TermWin.fwidth << 1)
          )
        )
