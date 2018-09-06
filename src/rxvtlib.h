@@ -134,15 +134,15 @@ typedef struct
     XftPattern	    **xftpattern;
     XftFont	    **xftfont, *xftpfont, *xftPfont;
     int		    numxftfont;
-#if 0
-# ifdef MULTICHAR_SET
-    //XftPattern*	    xftmpattern;
-    //XftFont*	    xftmfont;
-    //int		    xftmsize;
-#  ifdef HAVE_ICONV_H
+
+#ifdef MULTICHAR_SET
+    XftPattern*	    xftmpattern;
+    XftFont*	    xftmfont;
+    int  		    xftmsize;
+#ifdef HAVE_ICONV_H
     iconv_t	    xfticonv;
-#  endif
-# endif
+#endif
+
 #endif
 # ifndef NO_BOLDFONT
     XftFont**	    xftbfont;
